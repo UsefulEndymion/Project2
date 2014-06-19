@@ -3,6 +3,11 @@
 #include <Windows.h> // Include the Win32 API
 #include <tchar.h> // Include support for UNICODE
 #include <sstream> // Include wostringstream support
+#include <iterator>
+#include <list>
+using namespace std;
+
+
 using std::wostringstream;
 
 #include <d2d1.h> // Include the Direct2D API.
@@ -21,11 +26,32 @@ using std::wostringstream;
 #include "fmod_errors.h"
 #pragma comment(lib, "fmodex_vc.lib")
 
+
+
+//*******Defaults for ease of access******************
+#define GREYINITPOS D2D1::RectF(300, 300, 380, 380)
+#define BLACKINITPOS D2D1::RectF(200, 200, 280, 280)
+#define ZEROVECTOR D2D1::SizeF(0,0)
+#define FRAMEDURATION 100
+#define DEFAULTSPEED 2
+//*****************************************************//
+
+
+
 enum Level {Level1, NUMLEVELS};
 enum State {Intro, Menu, Playing, Paused};
 
 class Game
 {
+
+	struct Player
+	{
+		ID2D1Bitmap* sprite;
+		D2D1_RECT_F position;
+		D2D1_SIZE_F vector;
+		int frame;
+		DWORD frameDuration;
+	};
 	// Window Handle:
 	HWND hWnd;
 
@@ -40,7 +66,7 @@ class Game
 			*ppT = NULL;
 		}
 	}
-
+	
 	// Programmer defined macro to make using the known colors easier.
 	#define D2DColor(clr) D2D1::ColorF(D2D1::ColorF::clr)
 
@@ -79,19 +105,25 @@ class Game
 	DWORD dwLastUpdateTime;
 	DWORD dwElapsedTime;
 
-	// Animating character
-	int nFrame;
-	DWORD dwTime;
+	// Game Components
+	Player black, grey;
+
+	// Game Functions
+	bool Collision(D2D1_RECT_F _rectA, D2D1_RECT_F _rectB);
+	bool Collision(Player _player1, Player _player2);
+	bool Collision(Player _player, D2D1_RECT_F _rect);
 
 	//Game Variables
 	Level currLevel = Level1;
 	State currState = Playing;
+	list<D2D1_RECT_F> rects;
+	std::list<D2D1_RECT_F>::iterator iter;
+	
+	
 
-	// Game Components
-	D2D1_RECT_F playerpos;
 
 public:
-	ID2D1Bitmap* ninja;
+	
 	bool bRunning;		
 	HANDLE hGameThread; // Handle to the GameMain thread.
 	BYTE keys[256];		// Current state of the keyboard.
