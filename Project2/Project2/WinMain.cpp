@@ -18,6 +18,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void OnPaint(HWND hWnd);
 void OnLButtonDown(HWND hWnd, WPARAM wParam, LPARAM lParam);
 void OnCommand(HWND hWnd, WPARAM wParam, LPARAM lParam);
+void ToggleFullscreenMode(HWND hWnd, BOOL bFullScreen, int iWidth, int iHeight, int iBpp, int iRefreshRate);
 
 
 // Entry point function for the game:
@@ -55,8 +56,8 @@ int WINAPI _tWinMain( HINSTANCE hInstance,
 	HWND hWnd = CreateWindow(wcex.lpszClassName,
 		_T("Real-Time Skeleton"),
 		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT,
-		816, 642,
+		0, 0,
+		1920,1080,
 		HWND_DESKTOP,
 		NULL,
 		hInstance,
@@ -68,6 +69,10 @@ int WINAPI _tWinMain( HINSTANCE hInstance,
 			_T("Program Name"), MB_OK | MB_ICONERROR);
 		return -1;
 	}
+
+
+	ToggleFullscreenMode(hWnd, TRUE, 0, 0, 0, 0);
+
 
 
 	// Step 2.5: Create the Game thread:
@@ -250,5 +255,40 @@ void OnCommand(HWND hWnd, WPARAM wParam, LPARAM lParam)
 	case IDM_FILE_EXIT:
 		PostMessage(hWnd, WM_CLOSE, 0, 0);
 		break;
+	}
+}
+
+void ToggleFullscreenMode(HWND hWnd, BOOL bFullScreen, int iWidth, int iHeight, int iBpp, int iRefreshRate)
+{
+	static WINDOWPLACEMENT wp = { 0 };
+	static HMENU hMenu = NULL;
+
+	if (bFullScreen)
+	{
+		wp.length = sizeof(WINDOWPLACEMENT);
+		GetWindowPlacement(hWnd, &wp);
+
+		SetWindowLongPtr(hWnd, GWL_STYLE, WS_POPUP);
+
+		SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+
+		hMenu = GetMenu(hWnd);
+		SetMenu(hWnd, NULL);
+
+		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), SWP_SHOWWINDOW);
+
+		ShowCursor(false);
+	}
+
+	else
+	{
+		SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
+		SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+
+		SetMenu(hWnd, hMenu);
+
+		SetWindowPlacement(hWnd, &wp);
+
+		ShowCursor(true);
 	}
 }

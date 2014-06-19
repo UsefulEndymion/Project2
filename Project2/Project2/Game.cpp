@@ -43,9 +43,44 @@ void Game::Startup(void)
 	grey.position = GREYINITPOS;
 	grey.vector = ZEROVECTOR;
 	grey.frameDuration = GetTickCount() + FRAMEDURATION;
+	floor1pos = D2D1::RectF(400, 0, pRT->GetSize().width - 400, pRT->GetSize().height);
+	floor2pos = D2D1::RectF(400, -pRT->GetSize().height, pRT->GetSize().width - 400, 0);
+	floor3pos = D2D1::RectF(400, -2 * pRT->GetSize().height, pRT->GetSize().width - 400, -pRT->GetSize().height);
+	floorvec = D2D1::SizeF(0, 10);
 
-	D2D1_RECT_F rect = D2D1::RectF(100, 100, 200, 200);
-	rects.push_front(rect);
+	D2D1_RECT_F divider = D2D1::RectF(900, 0, 910, pRT->GetSize().height);
+	D2D1_RECT_F leftwall = D2D1::RectF(397, 0, 403, pRT->GetSize().height);
+	D2D1_RECT_F rightwall = D2D1::RectF(pRT->GetSize().width - 403, 0, pRT->GetSize().width - 397, pRT->GetSize().height);
+	rects.push_front(divider);
+	rects.push_front(leftwall);
+	rects.push_front(rightwall);
+
+
+	// Left Lane Rects
+	for (size_t i = 0; i < NUMRECTS; i++)
+	{
+		D2D1_RECT_F temp;
+		temp.left = (rand() % 501) + 400;
+		temp.right = temp.left + ((rand() % 30) + 75);
+		temp.top = -(rand() % (int)(2 * pRT->GetSize().height));
+		temp.bottom = temp.top + 20;
+		obstacles.push_front(temp);
+	}
+
+
+	// Right Lane Rects
+	for (size_t i = 0; i < NUMRECTS; i++)
+	{
+		D2D1_RECT_F temp;
+		temp.left = (rand() % 501) + 900;
+		temp.right = temp.left + ((rand() % 30) + 75);
+		temp.top = -(rand() % (int)(2 * pRT->GetSize().height));
+		temp.bottom = temp.top + 20;
+		obstacles.push_front(temp);
+	}
+	obstVec = D2D1::SizeF(0, OBSTACLESPEED);
+
+
 
 	/*nNinjaFrame = 0;
 	nGreyNinjaFrame = 0;
@@ -75,18 +110,18 @@ void Game::Input(void)
 	}
 
 	//Black Ninja Input
-	if (keys[VK_UP] & 0x80)
+	if (keys[VK_UP] & 0x80 && currLevel == Level2)
 	{
-		if (GetTickCount() > black.frameDuration)
+		if (GetTickCount() > black.frameDuration && currLevel == Level2)
 		{
 			black.frame++;
 			black.frameDuration = GetTickCount() + FRAMEDURATION;
 		}
 		black.vector.height = -DEFAULTSPEED;
 	}
-	if (keys[VK_DOWN] & 0x80)
+	if (keys[VK_DOWN] & 0x80 && currLevel == Level2)
 	{
-		if (GetTickCount() > black.frameDuration)
+		if (GetTickCount() > black.frameDuration && currLevel == Level2)
 		{
 			black.frame++;
 			black.frameDuration = GetTickCount() + FRAMEDURATION;
@@ -95,7 +130,7 @@ void Game::Input(void)
 	}
 	if (keys[VK_LEFT] & 0x80)
 	{
-		if (GetTickCount() > black.frameDuration)
+		if (GetTickCount() > black.frameDuration && currLevel == Level2)
 		{
 			black.frame++;
 			black.frameDuration = GetTickCount() + FRAMEDURATION;
@@ -104,7 +139,7 @@ void Game::Input(void)
 	}
 	if (keys[VK_RIGHT] & 0x80)
 	{
-		if (GetTickCount() > black.frameDuration)
+		if (GetTickCount() > black.frameDuration && currLevel == Level2)
 		{
 			black.frame++;
 			black.frameDuration = GetTickCount() + FRAMEDURATION;
@@ -117,7 +152,7 @@ void Game::Input(void)
 	// Grey Ninja Input
 	if (keys['A'] & 0x80)
 	{
-		if (GetTickCount() > grey.frameDuration)
+		if (GetTickCount() > grey.frameDuration && currLevel == Level2)
 		{
 			grey.frame++;
 			grey.frameDuration = GetTickCount() + FRAMEDURATION;
@@ -125,9 +160,9 @@ void Game::Input(void)
 		grey.vector.width = -DEFAULTSPEED;
 
 	}
-	if (keys['W'] & 0x80)
+	if (keys['W'] & 0x80 && currLevel == Level2)
 	{
-		if (GetTickCount() > grey.frameDuration)
+		if (GetTickCount() > grey.frameDuration && currLevel == Level2)
 		{
 			grey.frame++;
 			grey.frameDuration = GetTickCount() + FRAMEDURATION;
@@ -136,16 +171,16 @@ void Game::Input(void)
 	}
 	if (keys['D'] & 0x80)
 	{
-		if (GetTickCount() > grey.frameDuration)
+		if (GetTickCount() > grey.frameDuration && currLevel == Level2)
 		{
 			grey.frame++;
 			grey.frameDuration = GetTickCount() + FRAMEDURATION;
 		}
 		grey.vector.width = DEFAULTSPEED;
 	}
-	if (keys['S'] & 0x80)
+	if (keys['S'] & 0x80 && currLevel == Level2)
 	{
-		if (GetTickCount() > grey.frameDuration)
+		if (GetTickCount() > grey.frameDuration && currLevel == Level2)
 		{
 			grey.frame++;
 			grey.frameDuration = GetTickCount() + FRAMEDURATION;
@@ -162,16 +197,29 @@ void Game::Input(void)
 
 void Game::Simulate(void)
 {
-	if (!Collision(grey, black))
+
+	// Collision checks and moving
+	if (!Collision(grey, black))		// first checking player vs player collision
 	{
-		bool collision;
+		bool collision, hurtcollision;
 		
-		iter = rects.begin();
+		iter = rects.begin();		// then check collision with walls/boundaries
 		for (size_t i = 0; iter != rects.end(); iter++)
 		{
 			collision = Collision(grey, *iter);
 			if (collision)
 				break;
+
+		}
+		obstIter = obstacles.begin(); // then check collision with obstacles
+		for (; obstIter != obstacles.end(); obstIter++)
+		{
+			hurtcollision = Collision(grey, *obstIter);
+			if (hurtcollision)
+			{
+				Beep(500, 200);
+			}
+
 
 		}
 		if (!collision)
@@ -190,6 +238,17 @@ void Game::Simulate(void)
 				break;
 
 		}
+		obstIter = obstacles.begin();
+		for (; obstIter != obstacles.end(); obstIter++)
+		{
+			hurtcollision = Collision(black, *obstIter);
+			if (hurtcollision)
+			{
+				Beep(500, 200);
+			}
+
+
+		}
 		if (!collision)
 		{
 			black.position.bottom += black.vector.height;
@@ -200,6 +259,83 @@ void Game::Simulate(void)
 	}
 	black.vector = ZEROVECTOR;
 	grey.vector = ZEROVECTOR;
+
+	// Animating sprites
+	if (GetTickCount() > black.frameDuration)
+	{
+		black.frame++;
+		black.frameDuration = GetTickCount() + FRAMEDURATION;
+	}
+
+	if (black.frame == 5)
+		black.frame = 0;
+
+	if (GetTickCount() > grey.frameDuration)
+	{
+		grey.frame++;
+		grey.frameDuration = GetTickCount() + FRAMEDURATION;
+	}
+
+	if (grey.frame == 5)
+		grey.frame = 0;
+
+	// Scrolling floor
+	floor1pos.top += floorvec.height;
+	floor1pos.bottom += floorvec.height;
+	floor2pos.top += floorvec.height;
+	floor2pos.bottom += floorvec.height;
+	floor3pos.top += floorvec.height;
+	floor3pos.bottom += floorvec.height;
+	if (floor1pos.top >= pRT->GetSize().height)
+	{
+		floor1pos.top = -2 * pRT->GetSize().height;
+		floor1pos.bottom = -pRT->GetSize().height;
+	}
+	if (floor2pos.top >= pRT->GetSize().height)
+	{
+		floor2pos.top = -2 * pRT->GetSize().height;
+		floor2pos.bottom = -pRT->GetSize().height;
+	}
+	if (floor3pos.top >= pRT->GetSize().height)
+	{
+		floor3pos.top = -2 * pRT->GetSize().height;
+		floor3pos.bottom = -pRT->GetSize().height;
+	}
+
+
+	obstIter = obstacles.begin();
+	//Scrolling objects
+
+	for (; obstIter != obstacles.end(); obstIter++)
+	{
+		obstIter->top += obstVec.height;
+		obstIter->bottom += obstVec.height;
+		if (obstIter->top > pRT->GetSize().height)
+		{
+			obstIter->top = -2 * pRT->GetSize().height;
+			obstIter->bottom = obstIter->top + 20;
+			if (obstIter->left > 900)
+			{
+				obstIter->left = (rand() % 501) + 900;
+				obstIter->right = obstIter->left + ((rand() % 30) + 75);
+
+			}
+			else if (obstIter->right < 900)
+			{
+				obstIter->left = (rand() % 501) + 400;
+				obstIter->right = obstIter->left + ((rand() % 30) + 75);
+			}
+		}
+	}
+
+
+	/*D2D1_RECT_F temp;
+	temp.left = (rand() % 501) + 400;
+	temp.right = temp.left + ((rand() % 30) + 75);
+	temp.top = -(rand() % (int)(2 * pRT->GetSize().height));
+	temp.bottom = temp.top + 20;
+	obstacles.push_front(temp);*/
+
 	
 	
 	//Simulation here
@@ -211,6 +347,13 @@ void Game::Render(void)
 
 	
 	pRT->Clear(D2DColor(CornflowerBlue));
+
+	// Rendering Floor Textures
+	pRT->DrawBitmap(floor1, floor1pos);
+	pRT->DrawBitmap(floor2, floor2pos);
+	pRT->DrawBitmap(floor3, floor3pos);
+
+
 	// Render Black Ninja
 	D2D1_RECT_F sourceRect;
 	sourceRect.top = 0;
@@ -233,7 +376,15 @@ void Game::Render(void)
 	iter = rects.begin();
 	for (size_t i = 0; iter != rects.end(); iter++)
 	{
-		pRT->DrawRectangle(*iter, pBrush);
+		pRT->FillRectangle(*iter, pBrush);
+	}
+
+	pBrush->SetColor(D2DColor(Yellow));
+	obstIter = obstacles.begin();
+	// Render Obstacles
+	for (; obstIter != obstacles.end(); obstIter++)
+	{
+		pRT->FillRectangle(*obstIter, pBrush);
 	}
 	
 
@@ -408,6 +559,28 @@ HRESULT Game::CreateGraphics(HWND hWnd)
 		return hr;
 	}
 
+	// Load Floor Textures
+	hr = LoadBitmapFromFile(L"Images\\stonefloor.jpg", &floor1);
+	if (FAILED(hr))
+	{
+		MessageBox(HWND_DESKTOP, _T("ERROR: Failed to load stonefloor.jpg"),
+			_T("WIC Error"), MB_OK | MB_ICONERROR);
+		return hr;
+	}
+	hr = LoadBitmapFromFile(L"Images\\stonefloor.jpg", &floor2);
+	if (FAILED(hr))
+	{
+		MessageBox(HWND_DESKTOP, _T("ERROR: Failed to load stonefloor.jpg"),
+			_T("WIC Error"), MB_OK | MB_ICONERROR);
+		return hr;
+	}
+	hr = LoadBitmapFromFile(L"Images\\stonefloor.jpg", &floor3);
+	if (FAILED(hr))
+	{
+		MessageBox(HWND_DESKTOP, _T("ERROR: Failed to load stonefloor.jpg"),
+			_T("WIC Error"), MB_OK | MB_ICONERROR);
+		return hr;
+	}
 	return S_OK; // Success!
 }
 
