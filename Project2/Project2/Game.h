@@ -17,6 +17,12 @@ using std::wostringstream;
 #include <wincodec.h> // WIC Header
 #pragma comment(lib, "windowscodecs.lib")
 
+#include "fmod.hpp"
+#include "fmod_errors.h"
+#pragma comment(lib, "fmodex_vc.lib")
+
+enum Level {Level1, NUMLEVELS};
+enum State {Intro, Menu, Playing, Paused};
 
 class Game
 {
@@ -39,6 +45,7 @@ class Game
 	#define D2DColor(clr) D2D1::ColorF(D2D1::ColorF::clr)
 
 	HRESULT CreateGraphics(HWND hWnd);
+	FMOD_RESULT LoadFMOD();
 	void DestroyGraphics(void);
 
 	// DirectX Interfaces:
@@ -54,7 +61,16 @@ class Game
 
 	// WIC Interfaces
 	IWICImagingFactory* pWICFactory;
-	ID2D1Bitmap* image;
+
+
+	// FMOD Interface
+	FMOD::System* sys;
+	FMOD_RESULT result;
+	unsigned int version;
+	int numDrivers;
+	FMOD_SPEAKERMODE speakerMode;
+	FMOD_CAPS caps;
+	char name[256];
 
 
 	// Frames shit
@@ -63,8 +79,19 @@ class Game
 	DWORD dwLastUpdateTime;
 	DWORD dwElapsedTime;
 
+	// Animating character
+	int nFrame;
+	DWORD dwTime;
+
+	//Game Variables
+	Level currLevel = Level1;
+	State currState = Playing;
+
+	// Game Components
+	D2D1_RECT_F playerpos;
 
 public:
+	ID2D1Bitmap* ninja;
 	bool bRunning;		
 	HANDLE hGameThread; // Handle to the GameMain thread.
 	BYTE keys[256];		// Current state of the keyboard.

@@ -34,8 +34,9 @@ void Game::Startup(void)
 		return; // Return -1 to abort Window Creation.
 	}
 
-
-
+	nFrame = 0;
+	playerpos = D2D1::RectF(300, 300, 350, 350);
+	dwTime = GetTickCount() + 100;
 	//TODO: Initialize Game Components
 
 
@@ -56,12 +57,56 @@ void Game::Input(void)
 	{
 		PostMessage(hWnd, WM_CLOSE, 0, 0);
 	}
+	if (keys[VK_UP] & 0x80)
+	{
+		if (GetTickCount() > dwTime)
+		{
+			nFrame++;
+			dwTime = GetTickCount() + 100;
+		}
+		playerpos.top -= 4;
+		playerpos.bottom -= 4;
+	}
+	if (keys[VK_DOWN] & 0x80)
+	{
+		if (GetTickCount() > dwTime)
+		{
+			nFrame++;
+			dwTime = GetTickCount() + 100;
+		}
+		playerpos.top += 4;
+		playerpos.bottom += 4;
+	}
+	if (keys[VK_LEFT] & 0x80)
+	{
+		if (GetTickCount() > dwTime)
+		{
+			nFrame++;
+			dwTime = GetTickCount() + 100;
+		}
+		playerpos.left -= 4;
+		playerpos.right -= 4;
+	}
+	if (keys[VK_RIGHT] & 0x80)
+	{
+		if (GetTickCount() > dwTime)
+		{
+			nFrame++;
+			dwTime = GetTickCount() + 100;
+		}
+		playerpos.left += 4;
+		playerpos.right += 4;
+	}
+	if (nFrame == 5)
+		nFrame = 0;
+
 
 	
 }
 
 void Game::Simulate(void)
 {
+	
 	//Simulation here
 }
 
@@ -72,6 +117,14 @@ void Game::Render(void)
 	
 	pRT->Clear(D2DColor(CornflowerBlue));
 
+	D2D1_RECT_F sourceRect;
+	sourceRect.top = 0;
+	sourceRect.bottom = 88;
+	sourceRect.left =  88.0f * nFrame;
+	sourceRect.right = sourceRect.left + 88;
+
+
+	pRT->DrawBitmap(ninja, playerpos, 1.0F, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, sourceRect);
 	
 
 	HRESULT hr = pRT->EndDraw();
@@ -103,13 +156,54 @@ HRESULT Game::LoadBitmapFromFile(LPCTSTR strFileName, ID2D1Bitmap** ppBitmap)
 	{
 		hr = pConverter->Initialize(pSource, GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, NULL, 0.f, WICBitmapPaletteTypeMedianCut);
 	}
-
+	if (SUCCEEDED(hr))
+	{
+		hr = pRT->CreateBitmapFromWicBitmap(pConverter, NULL, ppBitmap);
+	}
 	SafeRelease(&pDecoder);
 	SafeRelease(&pSource);
 	SafeRelease(&pConverter);
 	return hr;
 }
 
+FMOD_RESULT Game::LoadFMOD()
+{
+	result = FMOD::System_Create(&sys);
+	if (result != FMOD_OK)
+	{
+		MessageBox(HWND_DESKTOP, L"ERROR: Failed to create FMOD System.", L"FMOD Error", MB_OK | MB_ICONERROR);
+		return result;
+	}
+	result = sys->getVersion(&version);
+	if (result != FMOD_OK)
+	{
+		MessageBox(HWND_DESKTOP, L"ERROR: FMOD System out of date", L"FMOD Error", MB_OK | MB_ICONERROR);
+		return result;
+	}
+	if (version < FMOD_VERSION)
+	{
+		MessageBox(HWND_DESKTOP, L"ERROR: FMOD System out of date", L"FMOD Error", MB_OK | MB_ICONERROR);
+		return result;
+	}
+	result = sys->getNumDrivers(&numDrivers);
+	if (result != FMOD_OK)
+	{
+		MessageBox(HWND_DESKTOP, L"ERROR: Drivers fucked up", L"FMOD Error", MB_OK | MB_ICONERROR);
+		return result;
+	}
+	if (numDrivers == 0)
+	{
+		sys->setOutput(FMOD_OUTPUTTYPE_NOSOUND);
+	}
+
+	result = sys->init(100, FMOD_INIT_NORMAL, 0);
+	if (result == FMOD_ERR_OUTPUT_CREATEBUFFER)
+	{
+		sys->setSpeakerMode(FMOD_SPEAKERMODE_STEREO);
+		sys->init(100, FMOD_INIT_NORMAL, 0);
+	}
+	return result;
+}
 
 HRESULT Game::CreateGraphics(HWND hWnd)
 {
@@ -186,11 +280,21 @@ HRESULT Game::CreateGraphics(HWND hWnd)
 		return hr;
 	}
 
+	// Load Ninja Sprite
+	hr = LoadBitmapFromFile(L"C:\\Users\\Seth\\Documents\\GitHub\\Project2\\Project2\\Project2\\Images\\ninjasprite.png", &ninja);
+	if (FAILED(hr))
+	{
+		MessageBox(HWND_DESKTOP, _T("ERROR: Failed to load ninjasprite.png"),
+			_T("WIC Error"), MB_OK | MB_ICONERROR);
+		return hr;
+	}
+
 	return S_OK; // Success!
 }
 
 void Game::DestroyGraphics(void)
 {
+	SafeRelease(&ninja);
 	SafeRelease(&pTF);
 	SafeRelease(&pDWFactory);
 	SafeRelease(&pBrush);
