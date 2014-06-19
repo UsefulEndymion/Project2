@@ -34,9 +34,25 @@ void Game::Startup(void)
 		return; // Return -1 to abort Window Creation.
 	}
 
-	nFrame = 0;
+	black.frame = 0;
+	black.position = BLACKINITPOS;
+	black.vector = ZEROVECTOR;
+	black.frameDuration = GetTickCount() + FRAMEDURATION;
+
+	grey.frame = 0;
+	grey.position = GREYINITPOS;
+	grey.vector = ZEROVECTOR;
+	grey.frameDuration = GetTickCount() + FRAMEDURATION;
+
+	D2D1_RECT_F rect = D2D1::RectF(100, 100, 200, 200);
+	rects.push_front(rect);
+
+	/*nNinjaFrame = 0;
+	nGreyNinjaFrame = 0;
 	playerpos = D2D1::RectF(300, 300, 350, 350);
-	dwTime = GetTickCount() + 100;
+	player2pos = D2D1::RectF(200, 200, 250, 250);
+	dwGreyNinjaTime = GetTickCount() + 100;
+	dwBlackNinjaTime = GetTickCount() + 100;*/
 	//TODO: Initialize Game Components
 
 
@@ -57,48 +73,88 @@ void Game::Input(void)
 	{
 		PostMessage(hWnd, WM_CLOSE, 0, 0);
 	}
+
+	//Black Ninja Input
 	if (keys[VK_UP] & 0x80)
 	{
-		if (GetTickCount() > dwTime)
+		if (GetTickCount() > black.frameDuration)
 		{
-			nFrame++;
-			dwTime = GetTickCount() + 100;
+			black.frame++;
+			black.frameDuration = GetTickCount() + FRAMEDURATION;
 		}
-		playerpos.top -= 4;
-		playerpos.bottom -= 4;
+		black.vector.height = -DEFAULTSPEED;
 	}
 	if (keys[VK_DOWN] & 0x80)
 	{
-		if (GetTickCount() > dwTime)
+		if (GetTickCount() > black.frameDuration)
 		{
-			nFrame++;
-			dwTime = GetTickCount() + 100;
+			black.frame++;
+			black.frameDuration = GetTickCount() + FRAMEDURATION;
 		}
-		playerpos.top += 4;
-		playerpos.bottom += 4;
+		black.vector.height = DEFAULTSPEED;
 	}
 	if (keys[VK_LEFT] & 0x80)
 	{
-		if (GetTickCount() > dwTime)
+		if (GetTickCount() > black.frameDuration)
 		{
-			nFrame++;
-			dwTime = GetTickCount() + 100;
+			black.frame++;
+			black.frameDuration = GetTickCount() + FRAMEDURATION;
 		}
-		playerpos.left -= 4;
-		playerpos.right -= 4;
+		black.vector.width = -DEFAULTSPEED;
 	}
 	if (keys[VK_RIGHT] & 0x80)
 	{
-		if (GetTickCount() > dwTime)
+		if (GetTickCount() > black.frameDuration)
 		{
-			nFrame++;
-			dwTime = GetTickCount() + 100;
+			black.frame++;
+			black.frameDuration = GetTickCount() + FRAMEDURATION;
 		}
-		playerpos.left += 4;
-		playerpos.right += 4;
+		black.vector.width = DEFAULTSPEED;
 	}
-	if (nFrame == 5)
-		nFrame = 0;
+	if (black.frame == 5)
+		black.frame = 0;
+
+	// Grey Ninja Input
+	if (keys['A'] & 0x80)
+	{
+		if (GetTickCount() > grey.frameDuration)
+		{
+			grey.frame++;
+			grey.frameDuration = GetTickCount() + FRAMEDURATION;
+		}
+		grey.vector.width = -DEFAULTSPEED;
+
+	}
+	if (keys['W'] & 0x80)
+	{
+		if (GetTickCount() > grey.frameDuration)
+		{
+			grey.frame++;
+			grey.frameDuration = GetTickCount() + FRAMEDURATION;
+		}
+		grey.vector.height = -DEFAULTSPEED;
+	}
+	if (keys['D'] & 0x80)
+	{
+		if (GetTickCount() > grey.frameDuration)
+		{
+			grey.frame++;
+			grey.frameDuration = GetTickCount() + FRAMEDURATION;
+		}
+		grey.vector.width = DEFAULTSPEED;
+	}
+	if (keys['S'] & 0x80)
+	{
+		if (GetTickCount() > grey.frameDuration)
+		{
+			grey.frame++;
+			grey.frameDuration = GetTickCount() + FRAMEDURATION;
+		}
+		grey.vector.height = DEFAULTSPEED;
+	}
+
+	if (grey.frame == 5)
+		grey.frame = 0;
 
 
 	
@@ -106,6 +162,45 @@ void Game::Input(void)
 
 void Game::Simulate(void)
 {
+	if (!Collision(grey, black))
+	{
+		bool collision;
+		
+		iter = rects.begin();
+		for (size_t i = 0; iter != rects.end(); iter++)
+		{
+			collision = Collision(grey, *iter);
+			if (collision)
+				break;
+
+		}
+		if (!collision)
+		{
+			grey.position.bottom += grey.vector.height;
+			grey.position.left += grey.vector.width;
+			grey.position.right += grey.vector.width;
+			grey.position.top += grey.vector.height;
+		}
+
+		iter = rects.begin();
+		for (size_t i = 0; iter != rects.end(); iter++)
+		{
+			collision = Collision(black, *iter);
+			if (collision)
+				break;
+
+		}
+		if (!collision)
+		{
+			black.position.bottom += black.vector.height;
+			black.position.left += black.vector.width;
+			black.position.right += black.vector.width;
+			black.position.top += black.vector.height;
+		}
+	}
+	black.vector = ZEROVECTOR;
+	grey.vector = ZEROVECTOR;
+	
 	
 	//Simulation here
 }
@@ -116,15 +211,30 @@ void Game::Render(void)
 
 	
 	pRT->Clear(D2DColor(CornflowerBlue));
-
+	// Render Black Ninja
 	D2D1_RECT_F sourceRect;
 	sourceRect.top = 0;
-	sourceRect.bottom = 88;
-	sourceRect.left =  88.0f * nFrame;
-	sourceRect.right = sourceRect.left + 88;
+	sourceRect.bottom = 74;
+	sourceRect.left =  88.0f * black.frame + 10;
+	sourceRect.right = sourceRect.left + 74;
 
+	pRT->DrawBitmap(black.sprite, black.position, 1.0F, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, sourceRect);
 
-	pRT->DrawBitmap(ninja, playerpos, 1.0F, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, sourceRect);
+	// Render Grey Ninja
+
+	sourceRect.left = 88.0f * grey.frame + 10;
+	sourceRect.right = sourceRect.left + 74;
+
+	pRT->DrawBitmap(grey.sprite, grey.position, 1.0F, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, sourceRect);
+
+	// Render Rect
+	pBrush->SetColor(D2DColor(Black));
+
+	iter = rects.begin();
+	for (size_t i = 0; iter != rects.end(); iter++)
+	{
+		pRT->DrawRectangle(*iter, pBrush);
+	}
 	
 
 	HRESULT hr = pRT->EndDraw();
@@ -281,10 +391,19 @@ HRESULT Game::CreateGraphics(HWND hWnd)
 	}
 
 	// Load Ninja Sprite
-	hr = LoadBitmapFromFile(L"C:\\Users\\Seth\\Documents\\GitHub\\Project2\\Project2\\Project2\\Images\\ninjasprite.png", &ninja);
+	hr = LoadBitmapFromFile(L"\Images\\ninjasprite.png", &black.sprite);
 	if (FAILED(hr))
 	{
 		MessageBox(HWND_DESKTOP, _T("ERROR: Failed to load ninjasprite.png"),
+			_T("WIC Error"), MB_OK | MB_ICONERROR);
+		return hr;
+	}
+
+	// Load Grey Ninja Sprite
+	hr = LoadBitmapFromFile(L"Images\\greyninjasprite.png", &grey.sprite);
+	if (FAILED(hr))
+	{
+		MessageBox(HWND_DESKTOP, _T("ERROR: Failed to load greyninjasprite.png"),
 			_T("WIC Error"), MB_OK | MB_ICONERROR);
 		return hr;
 	}
@@ -294,11 +413,80 @@ HRESULT Game::CreateGraphics(HWND hWnd)
 
 void Game::DestroyGraphics(void)
 {
-	SafeRelease(&ninja);
+	SafeRelease(&grey.sprite);
+	SafeRelease(&black.sprite);
 	SafeRelease(&pTF);
 	SafeRelease(&pDWFactory);
 	SafeRelease(&pBrush);
 	SafeRelease(&pRT);
 	// Release the Direct2D Factory.
 	SafeRelease(&pD2DFactory);
+}
+
+/*********************\
+COLLISION FUNCTIONS
+\********************/
+
+
+
+bool Game::Collision(Player _player1, Player _player2)
+{
+	D2D1_RECT_F nextpos1, nextpos2;
+	nextpos1.top = _player1.position.top + _player1.vector.height;
+	nextpos1.bottom = _player1.position.bottom + _player1.vector.height;
+	nextpos1.left = _player1.position.left + _player1.vector.width;
+	nextpos1.right = _player1.position.right + _player1.vector.width;
+
+	nextpos2.top = _player2.position.top + _player2.vector.height;
+	nextpos2.bottom = _player2.position.bottom + _player2.vector.height;
+	nextpos2.left = _player2.position.left + _player2.vector.width;
+	nextpos2.right = _player2.position.right + _player2.vector.width;
+
+	if ((nextpos1.top <= nextpos2.bottom && nextpos1.top >= nextpos2.top) && (nextpos1.right <= nextpos2.right && nextpos1.right >= nextpos2.left))
+		return true;
+	if ((nextpos1.top <= nextpos2.bottom && nextpos1.top >= nextpos2.top) && (nextpos1.left <= nextpos2.right && nextpos1.left >= nextpos2.left))
+		return true;
+	if ((nextpos1.left <= nextpos2.right && nextpos1.left >= nextpos2.left) && (nextpos1.top <= nextpos2.bottom && nextpos1.top >= nextpos2.top))
+		return true;
+	if ((nextpos1.left <= nextpos2.right && nextpos1.left >= nextpos2.left) && (nextpos1.bottom <= nextpos2.top && nextpos1.bottom >= nextpos2.top))
+		return true;
+	if ((nextpos1.bottom >= nextpos2.top && nextpos1.bottom <= nextpos2.bottom) && (nextpos1.left <= nextpos2.right && nextpos1.left >= nextpos2.left))
+		return true;
+	if ((nextpos1.bottom >= nextpos2.top && nextpos1.bottom <= nextpos2.bottom) && (nextpos1.right <= nextpos2.right && nextpos1.right >= nextpos2.left))
+		return true;
+	if ((nextpos1.right >= nextpos2.left && nextpos1.right <= nextpos2.right) && (nextpos1.bottom >= nextpos2.top && nextpos1.bottom <= nextpos2.bottom))
+		return true;
+	if ((nextpos1.right >= nextpos2.left && nextpos1.right <= nextpos2.right) && (nextpos1.top <= nextpos2.bottom && nextpos1.top >= nextpos2.top))
+		return true;
+
+	return false;
+
+}
+bool Game::Collision(Player _player, D2D1_RECT_F _rect)
+{
+
+	D2D1_RECT_F nextpos1;
+	nextpos1.top = _player.position.top + _player.vector.height;
+	nextpos1.bottom = _player.position.bottom + _player.vector.height;
+	nextpos1.left = _player.position.left + _player.vector.width;
+	nextpos1.right = _player.position.right + _player.vector.width;
+
+
+	if ((nextpos1.top <= _rect.bottom && nextpos1.top >= _rect.top) && (nextpos1.right <= _rect.right && nextpos1.right >= _rect.left))
+		return true;
+	if ((nextpos1.top <= _rect.bottom && nextpos1.top >= _rect.top) && (nextpos1.left <= _rect.right && nextpos1.left >= _rect.left))
+		return true;
+	if ((nextpos1.left <= _rect.right && nextpos1.left >= _rect.left) && (nextpos1.top <= _rect.bottom && nextpos1.top >= _rect.top))
+		return true;
+	if ((nextpos1.left <= _rect.right && nextpos1.left >= _rect.left) && (nextpos1.bottom <= _rect.top && nextpos1.bottom >= _rect.top))
+		return true;
+	if ((nextpos1.bottom >= _rect.top && nextpos1.bottom <= _rect.bottom) && (nextpos1.left <= _rect.right && nextpos1.left >= _rect.left))
+		return true;
+	if ((nextpos1.bottom >= _rect.top && nextpos1.bottom <= _rect.bottom) && (nextpos1.right <= _rect.right && nextpos1.right >= _rect.left))
+		return true;
+	if ((nextpos1.right >= _rect.left && nextpos1.right <= _rect.right) && (nextpos1.bottom >= _rect.top && nextpos1.bottom <= _rect.bottom))
+		return true;
+	if ((nextpos1.right >= _rect.left && nextpos1.right <= _rect.right) && (nextpos1.top <= _rect.bottom && nextpos1.top >= _rect.top))
+		return true;
+	return false;
 }
