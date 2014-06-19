@@ -29,16 +29,18 @@ using std::wostringstream;
 
 
 //*******Defaults for ease of access******************
-#define GREYINITPOS D2D1::RectF(300, 300, 380, 380)
-#define BLACKINITPOS D2D1::RectF(200, 200, 280, 280)
+#define BLACKINITPOS D2D1::RectF(1150, 1000, 1225, 1075)
+#define GREYINITPOS D2D1::RectF(600, 1000, 675, 1075)
 #define ZEROVECTOR D2D1::SizeF(0,0)
 #define FRAMEDURATION 100
-#define DEFAULTSPEED 2
+#define DEFAULTSPEED 5
+#define NUMRECTS 20
+#define OBSTACLESPEED 10
 //*****************************************************//
 
 
 
-enum Level {Level1, NUMLEVELS};
+enum Level {Level1, Level2, NUMLEVELS};
 enum State {Intro, Menu, Playing, Paused};
 
 class Game
@@ -107,6 +109,10 @@ class Game
 
 	// Game Components
 	Player black, grey;
+	ID2D1Bitmap* floor1, *floor2, *floor3;
+	D2D1_RECT_F floor1pos, floor2pos, floor3pos;
+	D2D1_SIZE_F floorvec, obstVec;
+
 
 	// Game Functions
 	bool Collision(D2D1_RECT_F _rectA, D2D1_RECT_F _rectB);
@@ -117,7 +123,9 @@ class Game
 	Level currLevel = Level1;
 	State currState = Playing;
 	list<D2D1_RECT_F> rects;
+	list<D2D1_RECT_F> obstacles;
 	std::list<D2D1_RECT_F>::iterator iter;
+	std::list<D2D1_RECT_F>::iterator obstIter;
 	
 	
 
