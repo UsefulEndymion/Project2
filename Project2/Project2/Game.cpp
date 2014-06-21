@@ -39,12 +39,26 @@ void Game::Startup(void)
 	black.position = BLACKINITPOS;
 	black.vector = ZEROVECTOR;
 	black.frameDuration = GetTickCount() + FRAMEDURATION;
+	black.controllernum = 0;
+	XInputGetState(black.controllernum, &black.controllerState);
+
+
+	// TESTING CONTROLLER
+	//black.vibrateState.wLeftMotorSpeed = 60000;
+	//XInputSetState(black.controllernum, &black.vibrateState);
+	
 
 	grey.frame = 0;
 	grey.health = 100;
 	grey.position = GREYINITPOS;
 	grey.vector = ZEROVECTOR;
 	grey.frameDuration = GetTickCount() + FRAMEDURATION;
+	grey.controllernum = 1;
+	XInputGetState(grey.controllernum, &grey.controllerState);
+
+
+
+
 	floor1pos = D2D1::RectF(400, 0, pRT->GetSize().width - 400, pRT->GetSize().height);
 	floor2pos = D2D1::RectF(400, -pRT->GetSize().height, pRT->GetSize().width - 400, 0);
 	floor3pos = D2D1::RectF(400, -2 * pRT->GetSize().height, pRT->GetSize().width - 400, -pRT->GetSize().height);
@@ -93,7 +107,7 @@ void Game::Startup(void)
 	}
 	obstVec = D2D1::SizeF(0, OBSTACLESPEED);
 
-
+	currState = Playing;
 
 	/*nNinjaFrame = 0;
 	nGreyNinjaFrame = 0;
@@ -116,7 +130,11 @@ void Game::Shutdown(void)
 
 void Game::Input(void)
 {
-	
+	// Get state of any 360 controllers
+	XInputGetState(black.controllernum, &black.controllerState);
+	XInputGetState(grey.controllernum, &grey.controllerState);
+
+
 	if (keys[VK_ESCAPE] & 0x80)
 	{
 		PostMessage(hWnd, WM_CLOSE, 0, 0);
@@ -141,7 +159,7 @@ void Game::Input(void)
 		}
 		black.vector.height = DEFAULTSPEED;
 	}
-	if (keys[VK_LEFT] & 0x80)
+	if (keys[VK_LEFT] & 0x80 || black.controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT || black.controllerState.Gamepad.sThumbLX < -DEADZONEBUFFER)
 	{
 		if (GetTickCount() > black.frameDuration && currLevel == Level2)
 		{
@@ -150,7 +168,7 @@ void Game::Input(void)
 		}
 		black.vector.width = -DEFAULTSPEED;
 	}
-	if (keys[VK_RIGHT] & 0x80)
+	if (keys[VK_RIGHT] & 0x80 || black.controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT || black.controllerState.Gamepad.sThumbLX > DEADZONEBUFFER)
 	{
 		if (GetTickCount() > black.frameDuration && currLevel == Level2)
 		{
@@ -163,7 +181,7 @@ void Game::Input(void)
 		black.frame = 0;
 
 	// Grey Ninja Input
-	if (keys['A'] & 0x80)
+	if (keys['A'] & 0x80 || grey.controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT || grey.controllerState.Gamepad.sThumbLX < -DEADZONEBUFFER)
 	{
 		if (GetTickCount() > grey.frameDuration && currLevel == Level2)
 		{
@@ -182,7 +200,7 @@ void Game::Input(void)
 		}
 		grey.vector.height = -DEFAULTSPEED;
 	}
-	if (keys['D'] & 0x80)
+	if (keys['D'] & 0x80 || grey.controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT || grey.controllerState.Gamepad.sThumbLX > DEADZONEBUFFER)
 	{
 		if (GetTickCount() > grey.frameDuration && currLevel == Level2)
 		{
@@ -203,6 +221,9 @@ void Game::Input(void)
 
 	if (grey.frame == 5)
 		grey.frame = 0;
+
+	ZeroMemory(&black.controllerState, sizeof(XINPUT_STATE));
+	ZeroMemory(&grey.controllerState, sizeof(XINPUT_STATE));
 
 
 	
@@ -230,7 +251,9 @@ void Game::Simulate(void)
 			hurtcollision = Collision(grey, obstIter->hitbox);
 			if (hurtcollision)
 			{
-				Beep(500, 100);
+				grey.health -= 5;
+				if (grey.health < 0)
+					grey.health = 0;
 			}
 
 
@@ -257,7 +280,9 @@ void Game::Simulate(void)
 			hurtcollision = Collision(black, obstIter->hitbox);
 			if (hurtcollision)
 			{
-				Beep(500, 100);
+				black.health -= 5;
+				if (black.health < 0)
+					black.health = 0;
 			}
 
 
@@ -358,56 +383,71 @@ void Game::Render(void)
 
 	
 	pRT->Clear(D2DColor(CornflowerBlue));
-
-	// Rendering Floor Textures
-	pRT->DrawBitmap(floor1, floor1pos);
-	pRT->DrawBitmap(floor2, floor2pos);
-	pRT->DrawBitmap(floor3, floor3pos);
-
-
-	// Render Black Ninja
-	D2D1_RECT_F sourceRect;
-	sourceRect.top = 0;
-	sourceRect.bottom = 74;
-	sourceRect.left =  88.0f * black.frame + 10;
-	sourceRect.right = sourceRect.left + 74;
-
-	pRT->DrawBitmap(black.sprite, black.position, 1.0F, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, sourceRect);
-
-	// Render Grey Ninja
-
-	sourceRect.left = 88.0f * grey.frame + 10;
-	sourceRect.right = sourceRect.left + 74;
-
-	pRT->DrawBitmap(grey.sprite, grey.position, 1.0F, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, sourceRect);
-
-	// Render Rect
-	pBrush->SetColor(D2DColor(Black));
-
-	iter = rects.begin();
-	for (size_t i = 0; iter != rects.end(); iter++)
+	switch (currState)
 	{
-		pRT->FillRectangle(*iter, pBrush);
+	case Playing:
+	{
+
+
+
+					// Rendering Floor Textures
+					pRT->DrawBitmap(floor1, floor1pos);
+					pRT->DrawBitmap(floor2, floor2pos);
+					pRT->DrawBitmap(floor3, floor3pos);
+
+
+					// Render Black Ninja
+					D2D1_RECT_F sourceRect;
+					sourceRect.top = 0;
+					sourceRect.bottom = 74;
+					sourceRect.left = 88.0f * black.frame + 10;
+					sourceRect.right = sourceRect.left + 74;
+
+					pRT->DrawBitmap(black.sprite, black.position, 1.0F, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, sourceRect);
+
+					// Render Grey Ninja
+
+					sourceRect.left = 88.0f * grey.frame + 10;
+					sourceRect.right = sourceRect.left + 74;
+
+					pRT->DrawBitmap(grey.sprite, grey.position, 1.0F, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, sourceRect);
+
+					// Render Rect
+					pBrush->SetColor(D2DColor(Black));
+
+					iter = rects.begin();
+					for (size_t i = 0; iter != rects.end(); iter++)
+					{
+						pRT->FillRectangle(*iter, pBrush);
+					}
+
+					pBrush->SetColor(D2DColor(Yellow));
+					obstIter = obstacles.begin();
+					// Render Obstacles
+					for (; obstIter != obstacles.end(); obstIter++)
+					{
+						pRT->FillRectangle(obstIter->position, pBrush);
+					}
+
+					// Rendering health bar
+					blackhealth = D2D1::RectF(healthbar2.left, healthbar2.top, healthbar2.left + 4 * black.health, healthbar2.bottom);
+					greyhealth = D2D1::RectF(healthbar1.left, healthbar1.top, healthbar1.left + 4 * grey.health, healthbar1.bottom);
+
+					pBrush->SetColor(D2DColor(Red));
+					pRT->FillRectangle(blackhealth, pBrush);
+					pRT->FillRectangle(greyhealth, pBrush);
+					pBrush->SetColor(D2DColor(Yellow));
+					pRT->DrawRectangle(healthbar1, pBrush);
+					pRT->DrawRectangle(healthbar2, pBrush);
+					break;
+	}
+	case Menu:
+	{
+				 pRT->DrawBitmap(menupanel, D2D1::RectF(700, 300, 1100, 900));
+				 break;
 	}
 
-	pBrush->SetColor(D2DColor(Yellow));
-	obstIter = obstacles.begin();
-	// Render Obstacles
-	for (; obstIter != obstacles.end(); obstIter++)
-	{
-		pRT->FillRectangle(obstIter->position, pBrush);
 	}
-
-	// Rendering health bar
-	blackhealth = D2D1::RectF(healthbar2.left, healthbar2.top, healthbar2.left + 4 * black.health, healthbar2.bottom);
-	greyhealth = D2D1::RectF(healthbar1.left, healthbar1.top, healthbar1.left + 4 * grey.health, healthbar1.bottom);
-
-	pBrush->SetColor(D2DColor(Red));
-	pRT->FillRectangle(blackhealth, pBrush);
-	pRT->FillRectangle(greyhealth, pBrush);
-	pBrush->SetColor(D2DColor(Yellow));
-	pRT->DrawRectangle(healthbar1, pBrush);
-	pRT->DrawRectangle(healthbar2, pBrush);
 
 	
 
@@ -604,6 +644,15 @@ HRESULT Game::CreateGraphics(HWND hWnd)
 	if (FAILED(hr))
 	{
 		MessageBox(HWND_DESKTOP, _T("ERROR: Failed to load stonefloor.jpg"),
+			_T("WIC Error"), MB_OK | MB_ICONERROR);
+		return hr;
+	}
+
+	//Load Menu Panel
+	hr = LoadBitmapFromFile(L"Images\\BlankPanel.png", &menupanel);
+	if (FAILED(hr))
+	{
+		MessageBox(HWND_DESKTOP, _T("ERROR: Failed to load BlankPanel.png"),
 			_T("WIC Error"), MB_OK | MB_ICONERROR);
 		return hr;
 	}

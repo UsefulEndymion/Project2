@@ -22,6 +22,9 @@ using std::wostringstream;
 #include <wincodec.h> // WIC Header
 #pragma comment(lib, "windowscodecs.lib")
 
+#include <Xinput.h> // XInput for 360 controller
+#pragma comment(lib, "XInput9_1_0.lib")
+
 #include "fmod.hpp"
 #include "fmod_errors.h"
 #pragma comment(lib, "fmodex_vc.lib")
@@ -36,8 +39,8 @@ using std::wostringstream;
 #define DEFAULTSPEED 8
 #define NUMRECTS 13
 #define OBSTACLESPEED 15
+#define DEADZONEBUFFER 2000
 //*****************************************************//
-
 
 enum Level {Level1, Level2, NUMLEVELS};
 enum State {Intro, Menu, Playing, Paused};
@@ -47,10 +50,12 @@ class Game
 
 	struct Player
 	{
+		XINPUT_STATE controllerState;
+		XINPUT_VIBRATION vibrateState;
 		ID2D1Bitmap* sprite;
 		D2D1_RECT_F position;
 		D2D1_SIZE_F vector;
-		int frame;
+		int frame, controllernum;
 		float health;
 		DWORD frameDuration;
 	};
@@ -115,7 +120,7 @@ class Game
 
 	// Game Components
 	Player black, grey;
-	ID2D1Bitmap* floor1, *floor2, *floor3;
+	ID2D1Bitmap* floor1, *floor2, *floor3, *menupanel;
 	D2D1_RECT_F floor1pos, floor2pos, floor3pos, blackhealth, greyhealth;
 	D2D1_RECT_F healthbar1 = D2D1::RectF(450, 100, 850, 150);
 	D2D1_RECT_F healthbar2 = D2D1::RectF(1000, 100, 1400, 150);
