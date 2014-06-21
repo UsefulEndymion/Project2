@@ -2,6 +2,7 @@
 #include <Windows.h> // Include the Windows API (Win32 Application Programming Interface)
 #include <tchar.h> // Include UNICODE support
 #include <sstream> // Include ostringstream support
+#include <ctime>
 using std::wostringstream;
 
 #include <commdlg.h> // Include the Common Dialogs.
@@ -34,7 +35,7 @@ int WINAPI _tWinMain( HINSTANCE hInstance,
 	// Initialize the COM Library.
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
-
+	srand(static_cast<unsigned int>(GetTickCount()));
 	// Step 1: Initialize the Window Class.
 	WNDCLASSEX wcex;
 	wcex.cbSize = sizeof(wcex);
