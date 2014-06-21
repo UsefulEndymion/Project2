@@ -35,18 +35,20 @@ void Game::Startup(void)
 	}
 
 	black.frame = 0;
+	black.health = 100;
 	black.position = BLACKINITPOS;
 	black.vector = ZEROVECTOR;
 	black.frameDuration = GetTickCount() + FRAMEDURATION;
 
 	grey.frame = 0;
+	grey.health = 100;
 	grey.position = GREYINITPOS;
 	grey.vector = ZEROVECTOR;
 	grey.frameDuration = GetTickCount() + FRAMEDURATION;
 	floor1pos = D2D1::RectF(400, 0, pRT->GetSize().width - 400, pRT->GetSize().height);
 	floor2pos = D2D1::RectF(400, -pRT->GetSize().height, pRT->GetSize().width - 400, 0);
 	floor3pos = D2D1::RectF(400, -2 * pRT->GetSize().height, pRT->GetSize().width - 400, -pRT->GetSize().height);
-	floorvec = D2D1::SizeF(0, 10);
+	floorvec = D2D1::SizeF(0, 15);
 
 	D2D1_RECT_F divider = D2D1::RectF(900, 0, 910, pRT->GetSize().height);
 	D2D1_RECT_F leftwall = D2D1::RectF(397, 0, 403, pRT->GetSize().height);
@@ -57,26 +59,37 @@ void Game::Startup(void)
 
 
 	// Left Lane Rects
+
 	for (size_t i = 0; i < NUMRECTS; i++)
 	{
-		D2D1_RECT_F temp;
-		temp.left = (rand() % 501) + 400;
-		temp.right = temp.left + ((rand() % 30) + 75);
-		temp.top = -(rand() % (int)(2 * pRT->GetSize().height));
-		temp.bottom = temp.top + 20;
-		obstacles.push_front(temp);
+		Obstacle temp;
+		temp.position.left = (rand() % 396) + 400;
+		temp.position.right = temp.position.left + ((rand() % 30) + 75);
+		temp.position.top = -(rand() % (int)(3 * pRT->GetSize().height));
+		temp.position.bottom = temp.position.top + 20;
+		temp.hitbox.left = temp.position.left + 18;
+		temp.hitbox.right = temp.position.right - 18;
+		temp.hitbox.top = temp.position.top +5;
+		temp.hitbox.bottom = temp.position.bottom -5;
+		obstacles.push_back(temp);
+		
 	}
-
 
 	// Right Lane Rects
 	for (size_t i = 0; i < NUMRECTS; i++)
 	{
-		D2D1_RECT_F temp;
-		temp.left = (rand() % 501) + 900;
-		temp.right = temp.left + ((rand() % 30) + 75);
-		temp.top = -(rand() % (int)(2 * pRT->GetSize().height));
-		temp.bottom = temp.top + 20;
-		obstacles.push_front(temp);
+
+		Obstacle temp;
+		temp.position.left = (rand() % 396) + 900;
+		temp.position.right = temp.position.left + ((rand() % 30) + 75);
+		temp.position.top = -(rand() % (int)(3 * pRT->GetSize().height));
+		temp.position.bottom = temp.position.top + 20;
+		temp.hitbox.left = temp.position.left + 15;
+		temp.hitbox.right = temp.position.right - 15;
+		temp.hitbox.top = temp.position.top;
+		temp.hitbox.bottom = temp.position.bottom;
+		obstacles.push_back(temp);
+
 	}
 	obstVec = D2D1::SizeF(0, OBSTACLESPEED);
 
@@ -214,10 +227,10 @@ void Game::Simulate(void)
 		obstIter = obstacles.begin(); // then check collision with obstacles
 		for (; obstIter != obstacles.end(); obstIter++)
 		{
-			hurtcollision = Collision(grey, *obstIter);
+			hurtcollision = Collision(grey, obstIter->hitbox);
 			if (hurtcollision)
 			{
-				Beep(500, 200);
+				Beep(500, 100);
 			}
 
 
@@ -238,13 +251,13 @@ void Game::Simulate(void)
 				break;
 
 		}
-		obstIter = obstacles.begin();
+		obstIter = obstacles.begin(); 
 		for (; obstIter != obstacles.end(); obstIter++)
 		{
-			hurtcollision = Collision(black, *obstIter);
+			hurtcollision = Collision(black, obstIter->hitbox);
 			if (hurtcollision)
 			{
-				Beep(500, 200);
+				Beep(500, 100);
 			}
 
 
@@ -304,37 +317,35 @@ void Game::Simulate(void)
 
 
 	obstIter = obstacles.begin();
+
 	//Scrolling objects
 
 	for (; obstIter != obstacles.end(); obstIter++)
 	{
-		obstIter->top += obstVec.height;
-		obstIter->bottom += obstVec.height;
-		if (obstIter->top > pRT->GetSize().height)
+		obstIter->position.top += obstVec.height;
+		obstIter->position.bottom += obstVec.height;
+		if (obstIter->position.top > pRT->GetSize().height)
 		{
-			obstIter->top = -2 * pRT->GetSize().height;
-			obstIter->bottom = obstIter->top + 20;
-			if (obstIter->left > 900)
+			obstIter->position.top = -2 * pRT->GetSize().height;
+			obstIter->position.bottom = obstIter->position.top + 20;
+			if (obstIter->position.left > 900)
 			{
-				obstIter->left = (rand() % 501) + 900;
-				obstIter->right = obstIter->left + ((rand() % 30) + 75);
+				obstIter->position.left = (rand() % 396) + 900;
+				obstIter->position.right = obstIter->position.left + ((rand() % 30) + 75);
 
 			}
-			else if (obstIter->right < 900)
+			else if (obstIter->position.right < 900)
 			{
-				obstIter->left = (rand() % 501) + 400;
-				obstIter->right = obstIter->left + ((rand() % 30) + 75);
+				obstIter->position.left = (rand() % 396) + 400;
+				obstIter->position.right = obstIter->position.left + ((rand() % 30) + 75);
 			}
 		}
+		obstIter->hitbox.top = obstIter->position.top;
+		obstIter->hitbox.bottom = obstIter->position.bottom;
+		obstIter->hitbox.left = obstIter->position.left + 15;
+		obstIter->hitbox.right = obstIter->position.right + 15;
 	}
 
-
-	/*D2D1_RECT_F temp;
-	temp.left = (rand() % 501) + 400;
-	temp.right = temp.left + ((rand() % 30) + 75);
-	temp.top = -(rand() % (int)(2 * pRT->GetSize().height));
-	temp.bottom = temp.top + 20;
-	obstacles.push_front(temp);*/
 
 	
 	
@@ -384,8 +395,23 @@ void Game::Render(void)
 	// Render Obstacles
 	for (; obstIter != obstacles.end(); obstIter++)
 	{
-		pRT->FillRectangle(*obstIter, pBrush);
+		pRT->FillRectangle(obstIter->position, pBrush);
 	}
+
+	// Rendering health bar
+	blackhealth = D2D1::RectF(healthbar2.left, healthbar2.top, healthbar2.left + 4 * black.health, healthbar2.bottom);
+	greyhealth = D2D1::RectF(healthbar1.left, healthbar1.top, healthbar1.left + 4 * grey.health, healthbar1.bottom);
+
+	pBrush->SetColor(D2DColor(Red));
+	pRT->FillRectangle(blackhealth, pBrush);
+	pRT->FillRectangle(greyhealth, pBrush);
+	pBrush->SetColor(D2DColor(Yellow));
+	pRT->DrawRectangle(healthbar1, pBrush);
+	pRT->DrawRectangle(healthbar2, pBrush);
+
+	
+
+	
 	
 
 	HRESULT hr = pRT->EndDraw();

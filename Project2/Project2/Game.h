@@ -29,15 +29,14 @@ using std::wostringstream;
 
 
 //*******Defaults for ease of access******************
-#define BLACKINITPOS D2D1::RectF(1150, 1000, 1225, 1075)
-#define GREYINITPOS D2D1::RectF(600, 1000, 675, 1075)
+#define BLACKINITPOS D2D1::RectF(1150, 950, 1225, 1025)
+#define GREYINITPOS D2D1::RectF(600, 950, 675, 1025)
 #define ZEROVECTOR D2D1::SizeF(0,0)
 #define FRAMEDURATION 100
-#define DEFAULTSPEED 5
-#define NUMRECTS 20
-#define OBSTACLESPEED 10
+#define DEFAULTSPEED 8
+#define NUMRECTS 13
+#define OBSTACLESPEED 15
 //*****************************************************//
-
 
 
 enum Level {Level1, Level2, NUMLEVELS};
@@ -52,7 +51,14 @@ class Game
 		D2D1_RECT_F position;
 		D2D1_SIZE_F vector;
 		int frame;
+		float health;
 		DWORD frameDuration;
+	};
+
+	struct Obstacle
+	{
+		D2D1_RECT_F position;
+		D2D1_RECT_F hitbox;
 	};
 	// Window Handle:
 	HWND hWnd;
@@ -110,7 +116,9 @@ class Game
 	// Game Components
 	Player black, grey;
 	ID2D1Bitmap* floor1, *floor2, *floor3;
-	D2D1_RECT_F floor1pos, floor2pos, floor3pos;
+	D2D1_RECT_F floor1pos, floor2pos, floor3pos, blackhealth, greyhealth;
+	D2D1_RECT_F healthbar1 = D2D1::RectF(450, 100, 850, 150);
+	D2D1_RECT_F healthbar2 = D2D1::RectF(1000, 100, 1400, 150);
 	D2D1_SIZE_F floorvec, obstVec;
 
 
@@ -123,9 +131,10 @@ class Game
 	Level currLevel = Level1;
 	State currState = Playing;
 	list<D2D1_RECT_F> rects;
-	list<D2D1_RECT_F> obstacles;
+	list<Obstacle> obstacles;
+	std::list<Obstacle>::iterator obstIter;
 	std::list<D2D1_RECT_F>::iterator iter;
-	std::list<D2D1_RECT_F>::iterator obstIter;
+
 	
 	
 
